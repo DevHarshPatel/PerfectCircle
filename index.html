@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfect Circle</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Press Start 2P', cursive;
+            background-color: #000;
+            color: #fff;
+        }
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #scoreDisplay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 5vw;
+            text-shadow: 0 0 10px currentColor;
+        }
+        #bestScore {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2vw;
+            color: #ffd700;
+        }
+        #newBestScore {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2vw;
+            color: #ffd700;
+            display: none;
+            animation: shine 1s infinite alternate;
+        }
+        #harshFun {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 1.5vw;
+            color: #fff;
+        }
+        #title {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3vw;
+            color: #fff;
+        }
+        #byHarshPatel {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 1.5vw;
+            color: #fff;
+        }
+        @keyframes shine {
+            from { text-shadow: 0 0 5px #ffd700; }
+            to { text-shadow: 0 0 20px #ffd700; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="canvas"></canvas>
+        <div id="title">Perfect Circle</div>
+        <div id="scoreDisplay"></div>
+        <div id="bestScore"></div>
+        <div id="newBestScore">New best score</div>
+        <div id="harshFun">HARSH.FUN</div>
+        <div id="byHarshPatel">by Harsh Patel</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const bestScoreElement = document.getElementById('bestScore');
+        const newBestScoreElement = document.getElementById('newBestScore');
+
+        let isDrawing = false;
+        let points = [];
+        let score = 0;
+        let bestScore = 0;
+        let centerX, centerY, radius;
+        let startPoint = null;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            centerX = canvas.width / 2;
+            centerY = canvas.height / 2;
+            radius = Math.min(canvas.width, canvas.height) * 0.4;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function startDrawing(e) {
+            isDrawing = true;
+            points = [];
+            startPoint = getPoint(e);
+            drawPoint(e);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            scoreDisplay.textContent = '0.0%';
+            bestScoreElement.textContent = '';
+            newBestScoreElement.style.display = 'none';
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                if (isCircleComplete()) {
+                    calculateScore();
+                    updateBestScore();
+                } else {
+                    scoreDisplay.textContent = 'DRAW A FULL CIRCLE';
+                }
+            }
+        }
+
+        function drawPoint(e) {
+            if (!isDrawing) return;
+
+            const point = getPoint(e);
+            points.push(point);
+
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+
+            if (points.length > 1) {
+                const prevPoint = points[points.length - 2];
+                const gradient = ctx.createLinearGradient(prevPoint.x, prevPoint.y, point.x, point.y);
+                const prevColor = getColorForPoint(prevPoint);
+                const currentColor = getColorForPoint(point);
+                
+                gradient.addColorStop(0, prevColor);
+                gradient.addColorStop(1, currentColor);
+
+                ctx.strokeStyle = gradient;
+                ctx.beginPath();
+                ctx.moveTo(prevPoint.x, prevPoint.y);
+                ctx.lineTo(point.x, point.y);
+                ctx.stroke();
+            }
+
+            calculateScore();
+            
+            if (isCircleComplete()) {
+                stopDrawing();
+            }
+        }
+
+        function getPoint(e) {
+            return {
+                x: e.clientX,
+                y: e.clientY
+            };
+        }
+
+        function isCircleComplete() {
+            if (points.length < 20) return false;
+            const lastPoint = points[points.length - 1];
+            const dx = lastPoint.x - startPoint.x;
+            const dy = lastPoint.y - startPoint.y;
+            return Math.sqrt(dx * dx + dy * dy) < 10;
+        }
+
+        function getColorForPoint(point) {
+            const dx = point.x - centerX;
+            const dy = point.y - centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const error = Math.abs(distance - radius);
+            const maxError = radius * 0.5;
+            const errorRatio = Math.min(error / maxError, 1);
+
+            const r = Math.round(255 * errorRatio);
+            const g = Math.round(255 * (1 - errorRatio));
+            return `rgb(${r}, ${g}, 0)`;
+        }
+
+        function calculateScore() {
+            if (points.length < 2) return;
+
+            let totalError = 0;
+            for (const point of points) {
+                const dx = point.x - centerX;
+                const dy = point.y - centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                totalError += Math.abs(distance - radius);
+            }
+
+            const avgError = totalError / points.length;
+            const maxError = radius;
+            score = Math.max(0, Math.round((1 - avgError / maxError) * 100 * 10) / 10);
+
+            displayScore();
+        }
+
+        function displayScore() {
+            scoreDisplay.textContent = score.toFixed(1) + '%';
+            scoreDisplay.style.color = getScoreColor(score);
+        }
+
+        function getScoreColor(score) {
+            const hue = Math.round((score / 100) * 120);
+            return `hsl(${hue}, 100%, 50%)`;
+        }
+
+        function updateBestScore() {
+            if (score > bestScore) {
+                bestScore = score;
+                newBestScoreElement.style.display = 'block';
+            }
+            bestScoreElement.textContent = `Best: ${bestScore.toFixed(1)}%`;
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', drawPoint);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch events for mobile devices
+        canvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            startDrawing(e.touches[0]);
+        });
+        canvas.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            drawPoint(e.touches[0]);
+        });
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchcancel', stopDrawing);
+    </script>
+</body>
+</html>
