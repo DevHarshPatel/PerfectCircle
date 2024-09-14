@@ -76,9 +76,42 @@
             font-size: 1.5vw;
             color: #fff;
         }
+        #reviewButton {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 1.5vw;
+            color: #fff;
+            background-color: #4CAF50;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #legendaryCircle {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3vw;
+            color: #ffd700;
+            display: none;
+            animation: glow 1s ease-in-out infinite alternate;
+        }
         @keyframes shine {
             from { text-shadow: 0 0 5px #ffd700; }
             to { text-shadow: 0 0 20px #ffd700; }
+        }
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #ffd700, 0 0 35px #ffd700, 0 0 40px #ffd700, 0 0 50px #ffd700, 0 0 75px #ffd700;
+            }
+            to {
+                text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #fff, 0 0 40px #ffd700, 0 0 70px #ffd700, 0 0 80px #ffd700, 0 0 100px #ffd700, 0 0 150px #ffd700;
+            }
         }
     </style>
 </head>
@@ -89,8 +122,10 @@
         <div id="scoreDisplay"></div>
         <div id="bestScore"></div>
         <div id="newBestScore">New best score</div>
+        <div id="legendaryCircle">Legendary Circle!</div>
         <div id="harshFun">HARSH.FUN</div>
         <div id="byHarshPatel">by Harsh Patel</div>
+        <button id="reviewButton" onclick="window.open('https://forms.office.com/r/fJP0P5FApb', '_blank')">Review</button>
     </div>
 
     <script>
@@ -99,6 +134,7 @@
         const scoreDisplay = document.getElementById('scoreDisplay');
         const bestScoreElement = document.getElementById('bestScore');
         const newBestScoreElement = document.getElementById('newBestScore');
+        const legendaryCircleElement = document.getElementById('legendaryCircle');
 
         let isDrawing = false;
         let points = [];
@@ -106,6 +142,7 @@
         let bestScore = 0;
         let centerX, centerY, radius;
         let startPoint = null;
+        let minDrawDistance = 50; // Minimum distance required to consider a valid draw
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
@@ -122,18 +159,22 @@
             isDrawing = true;
             points = [];
             startPoint = getPoint(e);
-            drawPoint(e);
+            points.push(startPoint);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             scoreDisplay.textContent = '0.0%';
             bestScoreElement.textContent = '';
             newBestScoreElement.style.display = 'none';
+            legendaryCircleElement.style.display = 'none';
         }
 
         function stopDrawing() {
-            if (isDrawing) {
+            if (isDrawing && isValidDraw()) {
                 isDrawing = false;
                 calculateScore();
                 updateBestScore();
+                checkLegendaryCircle();
+            } else {
+                resetGame();
             }
         }
 
@@ -171,8 +212,8 @@
 
         function getPoint(e) {
             return {
-                x: e.clientX || e.touches[0].clientX,
-                y: e.clientY || e.touches[0].clientY
+                x: e.clientX || (e.touches && e.touches[0].clientX) || 0,
+                y: e.clientY || (e.touches && e.touches[0].clientY) || 0
             };
         }
 
@@ -188,6 +229,14 @@
                 }
             }
             return false;
+        }
+
+        function isValidDraw() {
+            if (points.length < 2) return false;
+            const lastPoint = points[points.length - 1];
+            const dx = lastPoint.x - startPoint.x;
+            const dy = lastPoint.y - startPoint.y;
+            return Math.sqrt(dx * dx + dy * dy) >= minDrawDistance;
         }
 
         function getColorForPoint(point) {
@@ -237,6 +286,21 @@
                 newBestScoreElement.style.display = 'block';
             }
             bestScoreElement.textContent = `Best: ${bestScore.toFixed(1)}%`;
+        }
+
+        function checkLegendaryCircle() {
+            if (score > 96) {
+                legendaryCircleElement.style.display = 'block';
+            }
+        }
+
+        function resetGame() {
+            isDrawing = false;
+            points = [];
+            score = 0;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            scoreDisplay.textContent = '0.0%';
+            legendaryCircleElement.style.display = 'none';
         }
 
         canvas.addEventListener('mousedown', startDrawing);
