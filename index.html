@@ -132,12 +132,8 @@
         function stopDrawing() {
             if (isDrawing) {
                 isDrawing = false;
-                if (isCircleComplete()) {
-                    calculateScore();
-                    updateBestScore();
-                } else {
-                    scoreDisplay.textContent = 'DRAW A FULL CIRCLE';
-                }
+                calculateScore();
+                updateBestScore();
             }
         }
 
@@ -166,26 +162,32 @@
                 ctx.stroke();
             }
 
-            calculateScore();
-            
             if (isCircleComplete()) {
                 stopDrawing();
+            } else {
+                calculateScore();
             }
         }
 
         function getPoint(e) {
             return {
-                x: e.clientX,
-                y: e.clientY
+                x: e.clientX || e.touches[0].clientX,
+                y: e.clientY || e.touches[0].clientY
             };
         }
 
         function isCircleComplete() {
             if (points.length < 20) return false;
             const lastPoint = points[points.length - 1];
-            const dx = lastPoint.x - startPoint.x;
-            const dy = lastPoint.y - startPoint.y;
-            return Math.sqrt(dx * dx + dy * dy) < 10;
+            
+            for (let i = 0; i < points.length - 10; i++) {
+                const dx = lastPoint.x - points[i].x;
+                const dy = lastPoint.y - points[i].y;
+                if (Math.sqrt(dx * dx + dy * dy) < 10) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         function getColorForPoint(point) {
